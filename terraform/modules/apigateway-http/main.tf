@@ -1,0 +1,60 @@
+resource "oci_apigateway_gateway" "mygateway" {
+  #Required
+  compartment_id = var.compartment_id
+  endpoint_type = var.gateway_endpoint_type //PRIVATE or PUBLIC
+  subnet_id = var.subnet_id
+
+  display_name = var.gateway_name
+
+  //certificate_id = oci_apigateway_certificate.gw_cert.id
+  freeform_tags = var.freeform_tags
+  network_security_group_ids = var.nsg_ids
+}
+
+
+
+resource "oci_apigateway_deployment" "site_deployment_http" {
+
+  compartment_id = var.compartment_id
+  gateway_id = oci_apigateway_gateway.mygateway.id
+  path_prefix = var.site_prefix
+  display_name = var.deployment_name
+  specification {
+
+    dynamic routes {
+      #Required
+
+        for_each = var.routes
+        content {
+          backend {
+            #Required
+            type = "HTTP_BACKEND"
+
+            url  = routes.value.backend_url
+            is_ssl_verify_disabled = true
+          }
+          path    = routes.value.path
+          //for now leave it default
+          methods = var.methods
+          
+        }
+        }
+      }
+
+
+  }
+
+
+  resource "oci_apigateway_certificate" "gw_cert" {
+  #Required
+  certificate = var.public_cert
+  compartment_id = var.compartment_id
+  private_key = var.private_key
+  display_name = var.cert_display_name
+
+  #Optional
+  //defined_tags = {"Operations.CostCenter"= "42"}
+  freeform_tags = var.freeform_tags
+  intermediate_certificates = var.intermediate_cert
+}
+
